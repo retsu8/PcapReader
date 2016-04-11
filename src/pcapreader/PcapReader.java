@@ -1,15 +1,17 @@
 
 package pcapreader;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import org.jnetpcap.Pcap;
-import org.jnetpcap.PcapBpfProgram;
-import org.jnetpcap.packet.JHeader;
-import org.jnetpcap.packet.JPacket;
-import org.jnetpcap.packet.JPacketHandler;
-import org.jnetpcap.protocol.network.Ip4;
-import org.jnetpcap.protocol.tcpip.Tcp;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.jnetpcap.*;
+import org.jnetpcap.packet.format.FormatUtils;
+import org.jnetpcap.protocol.tcpip.Http;
 /**
  *
  * @author William Paddock, CSCI 476
@@ -17,126 +19,155 @@ import org.jnetpcap.protocol.tcpip.Tcp;
 /*
 * Prints info on captured TCP SYN packets (one line/packet) in an infinute loop
 */
-public class PcapReader {
-
-    public void start() {
-        StringBuilder errbuf = new StringBuilder(); // For any error msgs  
-        int snaplen = 64 * 1024;                    // Capture whole packets, no trucation  
-        int flags = Pcap.MODE_PROMISCUOUS;      
-        int timeout = 10 * 1000;                    // 10 seconds in millis  
-
-        Pcap pcap =
-                Pcap.openLive("eth0", snaplen, flags, timeout, errbuf);
-        if (pcap == null) {
-            throw new RuntimeException("failed to open eth0 for capture: " + errbuf.toString());
+public class PcapReader {    
+    public final Pcap pcap = null;
+    public static String IPADDRESS_PATTERN = "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
+    public class PolicyTemplete{    
+        private String Name = "";
+        private String Type = "";
+        private String proto = "";
+        private String host = "";
+        private String host_port = "";
+        private String attacker_port = "";
+        private String attacker = "";
+        private String to_host = "";
+        private PolicyTemplete(String Name, String Type, String proto, String host, String host_port, String attacker_port, String attacker, String to_host){
+            this.Name = Name;
+            this.Type = Type;
+            this.proto = proto;
+            this.host = host;
+            this.host_port = host_port;
+            this.attacker_port = attacker_port;
+            this.attacker = attacker;
+            this.to_host = to_host;
         }
-
-        PcapBpfProgram program = new PcapBpfProgram();
-        String synExpression = // SYN flag on, ACK flag off
-                "(tcp[tcpflags] & tcp-syn) != 0 and (tcp[tcpflags] & tcp-ack) == 0";
-        int optimize = 1;   // 0 = false, 1 = true
-        int netmask = 0;
-
-        if (pcap.compile(program, synExpression, optimize, netmask) != Pcap.OK
-                || pcap.setFilter(program) != Pcap.OK) {
-            throw new RuntimeException("filter init error: " + pcap.getErr());
-        }
-
-
-        JPacketHandler<String> packetHandler = new JPacketHandler<String>() {
-
-            private Ip4 ip = new Ip4();
-            private Tcp tcp = new Tcp();
-
-            @Override
-            public void nextPacket(JPacket packet, String user) {
-
-                StringBuilder info = new StringBuilder();
-
-                if (!packet.hasHeader(ip) || !packet.hasHeader(tcp)) {
-                    throw new RuntimeException("tcp syn filter is bad");
-                }
-
-                info.append(tcpEndPointStr(ip.source(), tcp.source()));
-                info.append(" > ");
-                info.append(tcpEndPointStr(ip.destination(), tcp.destination()));
-
-                info.append(" ip.length=");
-                info.append(ip.getLength());
-                info.append(" ip.ttl=");
-                info.append(ip.ttl());
-
-                info.append(" tcp.seq=");
-                info.append(tcp.seq());
-                info.append(" tcp.window=");
-                info.append(tcp.window());
-
-                info.append(" Flags[");
-                int count = 0;
-                for (Tcp.Flag cntrlFlag : tcp.flagsEnum()) {
-                    if (count++ > 0) {
-                        info.append(" ");
-                    }
-                    info.append(cntrlFlag);
-                }
-                info.append("]");
-
-
-                info.append(" Options[");
-                count = 0;
-                for (JHeader subheader : tcp.getSubHeaders()) {
-
-                    if (count++ > 0) {
-                        info.append(" ");
-                    }
-
-                    if (subheader instanceof Tcp.NoOp) {
-                        info.append("noOp");
-                    } else if (subheader instanceof Tcp.SACK_PERMITTED) {
-                        info.append("sackOK");
-                    } else if (subheader instanceof Tcp.MSS) {
-                        Tcp.MSS mss = (Tcp.MSS) subheader;
-                        info.append("mss=");
-                        info.append(mss.mss());
-                    } else if (subheader instanceof Tcp.WindowScale) {
-                        Tcp.WindowScale ws = (Tcp.WindowScale) subheader;
-                        info.append("wscale=");
-                        info.append(ws.scale());
-                    } else if (subheader instanceof Tcp.Timestamp) {
-                        Tcp.Timestamp ts = (Tcp.Timestamp) subheader;
-                        info.append("ts=");
-                        info.append(ts.tsval());
-                    } else if (subheader instanceof Tcp.TcpOption) {
-                        Tcp.TcpOption opt = (Tcp.TcpOption) subheader;
-                        info.append("UNEXPECTED_KIND=");
-                        info.append(opt.code());
-                        info.append(")");
-                    } else {
-                        info.append("UNEXPECTED_JHEADER_CLASS=");
-                        info.append(subheader.getClass());
-                        info.append(")");
-                    }
-                }
-                info.append("]");
-
-                System.out.println(info);
-            }
-        };
-
-        pcap.loop(Pcap.LOOP_INFINITE, packetHandler, "jNetPcap ru1ez!");
     }
-
-    private static String tcpEndPointStr(byte addrBytes[], int port) {
-        String addr;
+    private static void checkpolicy(PolicyTemplete inEffect) {
+        if(inEffect.Name == ""){
+            System.out.println("Name missing in policy, please add one");
+            System.exit(0);
+        }if(inEffect.Type == ""){
+            System.out.println("Type missing in policy, please add one");
+            System.exit(0);
+        }if(inEffect.proto == ""){
+            System.out.println("proto missing in policy, please add one");
+            System.exit(0);
+        }if(inEffect.host == ""){
+            System.out.println("host missing in policy, please add one");
+            System.exit(0);
+        }if(inEffect.host_port == ""){
+            System.out.println("host_port missing in policy, please add one");
+            System.exit(0);
+        }if(inEffect.attacker_port == ""){
+            System.out.println("attacker_port missing in policy, please add one");
+            System.exit(0);
+        }if(inEffect.attacker == ""){
+            System.out.println("attacker missing in policy, please add one");
+            System.exit(0);
+        }if(inEffect.to_host == ""){
+            System.out.println("to_host missing in policy, please add one");
+            System.exit(0);
+        }
+    }
+    private static void readpolicy(String policyFile, PolicyTemplete inEffect){
+        BufferedReader br = null;
         try {
-            addr = InetAddress.getByAddress(addrBytes).getHostAddress();
-        } catch (UnknownHostException ex) {
-            addr = "-";
-        }
-        return addr + ":" + port;
+            br = new BufferedReader(new FileReader(policyFile));
+            String line = null;
+            System.out.println("Building policy");
+            while ((line = br.readLine()) != null)
+            {
+                line = line.trim();
+                if(line.contains("host")){
+                    Pattern pattern = Pattern.compile(IPADDRESS_PATTERN);
+                    Matcher matcher = pattern.matcher(line);
+                    if (matcher.find()) {
+                        inEffect.host = matcher+"";
+                    }
+                    else{
+                        System.out.println("No host found please repair policy file");
+                    }                 
+                }else if(line.contains("name")){
+                    int i = line.indexOf("=");
+                    line = line.substring(i+1, line.length());
+                    inEffect.Name = line;
+                }else if(line.contains("type")){
+                    int i = line.indexOf("=");
+                    line = line.substring(i+1, line.length());
+                    inEffect.Type = line;
+                }else if(line.contains("proto")){
+                    int i = line.indexOf("=");
+                    line = line.substring(i+1, line.length());
+                    inEffect.proto = line;
+                }else if(line.contains("host_port")){
+                    int i = line.indexOf("=");
+                    line = line.substring(i+1, line.length());
+                    inEffect.host_port = line;
+                }else if(line.contains("host_port")){
+                    int i = line.indexOf("=");
+                    line = line.substring(i+1, line.length());
+                    inEffect.Name = line;
+                }else if(line.contains("attacker_port")){
+                    int i = line.indexOf("=");
+                    line = line.substring(i+1, line.length());
+                    inEffect.attacker_port = line;
+                }else if(line.contains("attacker")){
+                    int i = line.indexOf("=");
+                    line = line.substring(i+1, line.length());
+                    inEffect.attacker = line;
+                }else if(line.contains("to_host")){
+                    int i = line.indexOf("=");
+                    line = line.substring(i+1, line.length());
+                    inEffect.to_host = line;
+                }
+            }   
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(PcapReader.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                br.close();
+            } catch (IOException ex) {
+                Logger.getLogger(PcapReader.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }       
     }
-    
     public static void main(String[] args) {
-        new PcapReader().start();
+        String file = args[0];
+        String policyFile = args[1];
+        pcapRead(file, policyFile);
+    }  
+
+    public static void pcapRead(String file, String policyFile) {   
+        StringBuilder errbuf = new StringBuilder();  
+  
+        final Pcap pcap = Pcap.openOffline(file, errbuf);
+        PolicyTemplete inEffect
+        inEffect = PolicyTemplete();
+        inEffect = readpolicy(policyFile, inEffect);
+        checkpolicy(inEffect);
+    }  
+    public Pcap search(pack){
+        if (pack.hasHeader(tcp) && pack.hasHeader(http)) {  
+         pack.getHeader(eth);
+         pack.getHeader(tcp);
+         pack.getHeader(ip4);
+
+         if(tcp.destination() == 80) {
+               if(http.hasField(Http.Request.Accept) && http.fieldValue(Http.Request.Accept).contains("text/html")) {
+
+                   String dstIp = FormatUtils.ip(ip4.destination());
+                   String srcIp = FormatUtils.ip(ip4.source());
+                   String dstMac = FormatUtils.mac(eth.destination());
+                   String srcMac = FormatUtils.mac(eth.source());
+
+                   String host = http.fieldValue(Http.Request.Host);
+                   String url = host + http.fieldValue(Http.Request.RequestUrl);
+                   String referer =  http.fieldValue(Http.Request.Referer);
+
+                   RecorderService.recordHttpRequest(srcMac, srcIp, dstIp, host, url, referer);
+                   System.out.println("Request: " + srcIp + " - " + url);
+                   //superFlowMap.nextPacket(packet, superFlowMap);
+                }
+          }
     }
-}
+
