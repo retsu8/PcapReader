@@ -43,28 +43,28 @@ public class PcapReader {
         }
     }
     private static void checkpolicy(PolicyTemplete inEffect) {
-        if(inEffect.Name == ""){
+        if("".equals(inEffect.Name)){
             System.out.println("Name missing in policy, please add one");
             System.exit(0);
-        }if(inEffect.Type == ""){
+        }if("".equals(inEffect.Type)){
             System.out.println("Type missing in policy, please add one");
             System.exit(0);
-        }if(inEffect.proto == ""){
+        }if("".equals(inEffect.proto)){
             System.out.println("proto missing in policy, please add one");
             System.exit(0);
-        }if(inEffect.host == ""){
+        }if("".equals(inEffect.host)){
             System.out.println("host missing in policy, please add one");
             System.exit(0);
-        }if(inEffect.host_port == ""){
+        }if("".equals(inEffect.host_port)){
             System.out.println("host_port missing in policy, please add one");
             System.exit(0);
-        }if(inEffect.attacker_port == ""){
+        }if("".equals(inEffect.attacker_port)){
             System.out.println("attacker_port missing in policy, please add one");
             System.exit(0);
-        }if(inEffect.attacker == ""){
+        }if("".equals(inEffect.attacker)){
             System.out.println("attacker missing in policy, please add one");
             System.exit(0);
-        }if(inEffect.to_host == ""){
+        }if("".equals(inEffect.to_host)){
             System.out.println("to_host missing in policy, please add one");
             System.exit(0);
         }
@@ -73,7 +73,7 @@ public class PcapReader {
         BufferedReader br = null;
         try {
             br = new BufferedReader(new FileReader(policyFile));
-            String line = null;
+            String line = "";
             System.out.println("Building policy");
             while ((line = br.readLine()) != null)
             {
@@ -141,7 +141,7 @@ public class PcapReader {
         StringBuilder errbuf = new StringBuilder();  
   
         final Pcap pcap = Pcap.openOffline(file, errbuf);
-        PolicyTemplete inEffect
+        PolicyTemplete inEffect;
         inEffect = PolicyTemplete();
         inEffect = readpolicy(policyFile, inEffect);
         checkpolicy(inEffect);
