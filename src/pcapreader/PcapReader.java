@@ -6,8 +6,11 @@ import java.util.regex.Matcher;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import org.jnetpcap.Pcap;  
+import org.jnetpcap.nio.JMemory;
 import org.jnetpcap.packet.JPacket;
 import org.jnetpcap.packet.JPacketHandler;  
+import org.jnetpcap.packet.JScanner;
+import org.jnetpcap.packet.PcapPacket;
 import org.jnetpcap.protocol.tcpip.*;
 /*
  * @author William Paddock, CSCI 476
@@ -162,14 +165,15 @@ public class PcapReader {
         if (pcap == null) {  
             System.err.println(errbuf); // Error is stored in errbuf if any  
         }
-        pcap.loop(10, new JPacketHandler<StringBuilder>(){
-            final Tcp tcp = new Tcp();
+        JScanner.getThreadLocal().setFrameNumber(0);  
+        final PcapPacket packet = new PcapPacket(JMemory.POINTER);  
+        final Tcp tcp = new Tcp();  
+        for (int i = 0; i < Pcap.LOOP_INFINITE; i++) {  
             final Http http = new Http();
-           public void nextPacket(JPacket packet, StringBuilder errbuf){
+            pcap.nextEx(packet);  
                 if (packet.hasHeader(tcp)) {  
-                    System.out.printf("tcp header::%s%n", tcp.toString());
-                }                 
-           }
+                    packet.filterByType(type);
+                }  
         }
         return null;
     }
