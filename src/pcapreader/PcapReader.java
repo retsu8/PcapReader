@@ -49,9 +49,6 @@ public class PcapReader {
         }if("".equals(inEffect.Type)){
             System.out.println("Type missing in policy, please add one");
             System.exit(0);
-        }if("".equals(inEffect.proto)){
-            System.out.println("proto missing in policy, please add one");
-            System.exit(0);
         }if("".equals(inEffect.host)){
             System.out.println("host missing in policy, please add one");
             System.exit(0);
@@ -102,11 +99,11 @@ public class PcapReader {
                 }else if(line.contains("host_port")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
-                    inEffect.host_port = line;
-                }else if(line.contains("host_port")){
-                    int i = line.indexOf("=");
-                    line = line.substring(i+1, line.length());
-                    inEffect.Name = line;
+                    if(((int(line) < 62001) && (int(line) > 0)) || line.contentEquals("any")){
+                        inEffect.host_port = int(line);
+                    }else{
+                        System.out.print("Port is not in the range 1-62000 or any, Do not use ZERO");
+                        }
                 }else if(line.contains("attacker_port")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
