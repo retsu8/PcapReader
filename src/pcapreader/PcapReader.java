@@ -1,25 +1,21 @@
-
 package pcapreader;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
-import org.jnetpcap.*;
-import org.jnetpcap.packet.format.FormatUtils;
-import org.jnetpcap.protocol.tcpip.Http;
-/**
- *
+import org.jnetpcap.Pcap;  
+import org.jnetpcap.packet.JPacket;
+import org.jnetpcap.packet.JPacketHandler;  
+import org.jnetpcap.protocol.tcpip.*;
+/*
  * @author William Paddock, CSCI 476
  */
 /*
 * Prints info on captured TCP SYN packets (one line/packet) in an infinute loop
 */
-public class PcapReader {    
+public class PcapReader {
     public final Pcap pcap = null;
     public static String IPADDRESS_PATTERN = "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
     public class PolicyTemplete{    
@@ -83,6 +79,7 @@ public class PcapReader {
                     }
                     else{
                         System.out.println("No host found please repair policy file");
+                        System.exit(0);
                     }                 
                 }else if(line.contains("name")){
                     int i = line.indexOf("=");
@@ -91,7 +88,13 @@ public class PcapReader {
                 }else if(line.contains("type")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
-                    inEffect.Type = line;
+                    if(line.contains("stateful") || line.contains("stateless")){
+                        inEffect.Type = line;
+                    }
+                    else{
+                        System.out.println("Not stateless or stateful, must be set!!");
+                        System.exit(0);
+                    }
                 }else if(line.contains("proto")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
@@ -99,15 +102,19 @@ public class PcapReader {
                 }else if(line.contains("host_port")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
-                    if(((int(line) < 62001) && (int(line) > 0)) || line.contentEquals("any")){
-                        inEffect.host_port = int(line);
+                    if(line.contains("any") || ((Integer.parseInt(line) < 62001) && (Integer.parseInt(line) > 0))){
+                        inEffect.host_port = line;
                     }else{
                         System.out.print("Port is not in the range 1-62000 or any, Do not use ZERO");
                         }
                 }else if(line.contains("attacker_port")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
-                    inEffect.attacker_port = line;
+                    if(line.contains("any") || ((Integer.parseInt(line) < 62001) && (Integer.parseInt(line) > 0))){
+                        inEffect.attacker_port = line;
+                    }else{
+                        System.out.print("Port is not in the range 1-62000 or any, Do not use ZERO");
+                        }
                 }else if(line.contains("attacker")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
@@ -129,42 +136,41 @@ public class PcapReader {
         }       
     }
     public static void main(String[] args) {
-        String file = args[0];
+        String pcapFile = args[0];
         String policyFile = args[1];
-        pcapRead(file, policyFile);
+        pcapRead(pcapFile, policyFile);
     }  
 
-    public static void pcapRead(String file, String policyFile) {   
-        StringBuilder errbuf = new StringBuilder();  
-  
-        final Pcap pcap = Pcap.openOffline(file, errbuf);
+    public static void pcapRead(String pcapFile, String policyFile) {  
+        //Creating policy Class
         PolicyTemplete inEffect;
-        inEffect = PolicyTemplete();
-        inEffect = readpolicy(policyFile, inEffect);
+        //setting all policy to null
+        inEffect = PolicyTemplete(null, null, null, null, null, null, null, null);
+        //Building Policy
+        readpolicy(policyFile, inEffect);
         checkpolicy(inEffect);
-    }  
-    public Pcap search(pack){
-        if (pack.hasHeader(tcp) && pack.hasHeader(http)) {  
-         pack.getHeader(eth);
-         pack.getHeader(tcp);
-         pack.getHeader(ip4);
-
-         if(tcp.destination() == 80) {
-               if(http.hasField(Http.Request.Accept) && http.fieldValue(Http.Request.Accept).contains("text/html")) {
-
-                   String dstIp = FormatUtils.ip(ip4.destination());
-                   String srcIp = FormatUtils.ip(ip4.source());
-                   String dstMac = FormatUtils.mac(eth.destination());
-                   String srcMac = FormatUtils.mac(eth.source());
-
-                   String host = http.fieldValue(Http.Request.Host);
-                   String url = host + http.fieldValue(Http.Request.RequestUrl);
-                   String referer =  http.fieldValue(Http.Request.Referer);
-
-                   RecorderService.recordHttpRequest(srcMac, srcIp, dstIp, host, url, referer);
-                   System.out.println("Request: " + srcIp + " - " + url);
-                   //superFlowMap.nextPacket(packet, superFlowMap);
-                }
-          }
+        checkpcap(inEffect, pcapFile);
     }
-
+    public static Pcap checkpcap(PolicyTemplete inEffect, String pcapFile) {
+        StringBuilder errbuf = new StringBuilder(); 
+        //Opening capture file
+        final Pcap pcap = Pcap.openOffline(pcapFile, errbuf);
+        String line = "";
+        System.out.println("Scanning");
+        //Set for stateless or stateful
+        Boolean state = inEffect.Type.equalsIgnoreCase("stateful");
+        if (pcap == null) {  
+            System.err.println(errbuf); // Error is stored in errbuf if any  
+        }
+        pcap.loop(10, new JPacketHandler<StringBuilder>(){
+            final Tcp tcp = new Tcp();
+            final Http http = new Http();
+           public void nextPacket(JPacket packet, StringBuilder errbuf){
+                if (packet.hasHeader(tcp)) {  
+                    System.out.printf("tcp header::%s%n", tcp.toString());
+                }                 
+           }
+        }
+        return null;
+    }
+}
