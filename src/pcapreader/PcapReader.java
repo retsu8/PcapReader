@@ -175,20 +175,13 @@ public class PcapReader {
         final Tcp tcp = new Tcp();  
         pcap.loop(-1, new JPacketHandler<StringBuilder>(){
             final Tcp tcp = new Tcp();
-            final Http http = new Http;
+            final Http http = new Http();
             public void nextPacket(JPacket packet, StringBuilder errbuf){
                 if(packet.hasHeader(Tcp.ID))
                     packet.getHeader(tcp);
+                if (packet.hasHeader(tcp) && packet.hasHeader(http)){
+                }
             }
-        }
-            
-                for (int i = 0; i < Pcap.LOOP_INFINITE; i++) {  
-            final Http http = new Http();
-            pcap.nextEx(packet);  
-                if (packet.hasHeader(tcp)) {  
-                    packet.filterByType(type);
-                }  
-        }
-        return null;
+            }, errbuf);
+        return null;}
     }
-}
