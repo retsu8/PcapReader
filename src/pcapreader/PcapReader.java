@@ -7,6 +7,7 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import org.jnetpcap.Pcap;  
 import org.jnetpcap.nio.JMemory;
+import org.jnetpcap.packet.JFlowMap;
 import org.jnetpcap.packet.JPacket;
 import org.jnetpcap.packet.JPacketHandler;  
 import org.jnetpcap.packet.JScanner;
@@ -165,10 +166,23 @@ public class PcapReader {
         if (pcap == null) {  
             System.err.println(errbuf); // Error is stored in errbuf if any  
         }
-        JScanner.getThreadLocal().setFrameNumber(0);  
+        JScanner.getThreadLocal().setFrameNumber(0); 
+        if (state){
+            JFlowMap superFlowMap = new JFlowMap();
+            pcap.loop(Pcap.LOOP_INFINITE, superFlowMap, null);
+            }
         final PcapPacket packet = new PcapPacket(JMemory.POINTER);  
         final Tcp tcp = new Tcp();  
-        for (int i = 0; i < Pcap.LOOP_INFINITE; i++) {  
+        pcap.loop(-1, new JPacketHandler<StringBuilder>(){
+            final Tcp tcp = new Tcp();
+            final Http http = new Http;
+            public void nextPacket(JPacket packet, StringBuilder errbuf){
+                if(packet.hasHeader(Tcp.ID))
+                    packet.getHeader(tcp);
+            }
+        }
+            
+                for (int i = 0; i < Pcap.LOOP_INFINITE; i++) {  
             final Http http = new Http();
             pcap.nextEx(packet);  
                 if (packet.hasHeader(tcp)) {  
