@@ -1,6 +1,7 @@
 package pcapreader;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.logging.Logger;
@@ -12,6 +13,7 @@ import org.jnetpcap.packet.JPacket;
 import org.jnetpcap.packet.JPacketHandler;  
 import org.jnetpcap.packet.JScanner;
 import org.jnetpcap.packet.PcapPacket;
+import org.jnetpcap.protocol.network.Ip4;
 import org.jnetpcap.protocol.tcpip.*;
 /*
  * @author William Paddock, CSCI 476
@@ -26,12 +28,12 @@ public class PcapReader {
         private String Name = "";
         private String Type = "";
         private String proto = "";
-        private String host = "";
+        private Ip4 host = new Ip4();
         private String host_port = "";
         private String attacker_port = "";
         private String attacker = "";
         private String to_host = "";
-        private PolicyTemplete(String Name, String Type, String proto, String host, String host_port, String attacker_port, String attacker, String to_host){
+        private PolicyTemplete(String Name, String Type, String proto, Ip4 host, String host_port, String attacker_port, String attacker, String to_host){
             this.Name = Name;
             this.Type = Type;
             this.proto = proto;
@@ -49,7 +51,7 @@ public class PcapReader {
         }if("".equals(inEffect.Type)){
             System.out.println("Type missing in policy, please add one");
             System.exit(0);
-        }if("".equals(inEffect.host)){
+        }if(null != (inEffect.host)){
             System.out.println("host missing in policy, please add one");
             System.exit(0);
         }if("".equals(inEffect.host_port)){
@@ -78,8 +80,9 @@ public class PcapReader {
                 if(line.contains("host")){
                     Pattern pattern = Pattern.compile(IPADDRESS_PATTERN);
                     Matcher matcher = pattern.matcher(line);
-                    if (matcher.find()) {
-                        inEffect.host = matcher+"";
+                    if (matcher.find()){
+                        Ip4 ip = new Ip4();
+                        inEffect.host = InetAddress.getByName(matcher+"");
                     }
                     else{
                         System.out.println("No host found please repair policy file");
@@ -174,9 +177,18 @@ public class PcapReader {
         final PcapPacket packet = new PcapPacket(JMemory.POINTER);  
         final Tcp tcp = new Tcp();  
         pcap.loop(-1, new JPacketHandler<StringBuilder>(){
-            final Tcp tcp = new Tcp();
-            final Http http = new Http();
+            Tcp tcp = new Tcp();
+            Ip4 ip = new Ip4();
+            Http http = new Http();
             public void nextPacket(JPacket packet, StringBuilder errbuf){
+                if(packet.hasHeader(ip) && packet.hasHeader(tcp)){
+                    if(Integer.parseInt(inEffect.host) == Integer.parseInt(ip)){
+                        
+                    }
+                }
+                if(packet.toString().contains(inEffect.to_host)){
+                    System.out.printf("tcp header::%s%n", tcp.toString());
+                }
                 if(packet.hasHeader(Tcp.ID))
                     packet.getHeader(tcp);
                 if (packet.hasHeader(tcp) && packet.hasHeader(http)){
