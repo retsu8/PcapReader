@@ -161,6 +161,7 @@ public class PcapReader {
         checkpcap(pcapFile);
     }
     public static Pcap checkpcap(String pcapFile) {
+        System.out.println("Policy Name " + Name);
         Boolean state= false;
         StringBuilder errbuf = new StringBuilder(); 
         //Opening capture file
@@ -186,13 +187,13 @@ public class PcapReader {
             Ip4 ip = new Ip4();
             Http http = new Http();
             Udp udp = new Udp();
-            @Override
             public void nextPacket(JPacket packet, StringBuilder errbuf){
                 switch (proto)
                 {
                     case "tcp":{
-                        if(packet.hasHeader(ip) && packet.hasHeader(tcp)){
-                            if((Integer.getInteger(host_port) == tcp.destination())|| "any".equals(host_port)){
+                        packet.getHeader(tcp);
+                        if(packet.hasHeader(Tcp.ID) && packet.hasHeader(tcp)){
+                            if((Integer.getInteger(host_port) == tcp.source()) || "any".equals(host_port)){
                                 if(host.equals(ip.destination().toString())|| "any".equals(host)){
                                     if(to_host.contains(packet.toString()) || "any".equals(to_host)){
                                         System.out.printf("tcp header::%s%n", tcp.toString());
@@ -203,7 +204,7 @@ public class PcapReader {
                     }
                     case "udp":{
                         if(packet.hasHeader(ip) && packet.hasHeader(udp)){
-                            if((Integer.getInteger(host_port) == udp.destination())|| "any".equals(host_port)){
+                            if((Integer.getInteger(host_port) == udp.source())|| "any".equals(host_port)){
                                 if(host.equals(ip.destination().toString())|| host == "any"){
                                     if(to_host.contains(packet.toString()) || "any".equals(to_host)){
                                         System.out.printf("udp header::%s%n", udp.toString());
@@ -214,7 +215,7 @@ public class PcapReader {
                     }
                     default:{
                         if(packet.hasHeader(ip) && packet.hasHeader(udp)){
-                            if((Integer.getInteger(host_port) == udp.destination())|| "any".equals(host_port)){
+                            if((Integer.getInteger(host_port) == udp.source())|| "any".equals(host_port)){
                                 if(host.equals(ip.destination().toString())|| "any".equals(host)){
                                     if(to_host.contains(packet.toString()) || "any".equals(to_host)){
                                         System.out.printf("header::%s%n", packet.toString());
