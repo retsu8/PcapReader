@@ -2,10 +2,14 @@ package pcapreader;
 
 import java.io.*;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import javax.sound.sampled.Port;
 import org.jnetpcap.Pcap;  
 import org.jnetpcap.nio.JMemory;
 import org.jnetpcap.packet.JFlowMap;
@@ -23,66 +27,56 @@ import org.jnetpcap.protocol.tcpip.*;
 */
 public class PcapReader {
     public final Pcap pcap = null;
-    public static String IPADDRESS_PATTERN = "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
-    public class PolicyTemplete{    
-        private String Name = "";
-        private String Type = "";
-        private String proto = "";
-        private Ip4 host = new Ip4();
-        private String host_port = "";
-        private String attacker_port = "";
-        private String attacker = "";
-        private String to_host = "";
-        private PolicyTemplete(String Name, String Type, String proto, Ip4 host, String host_port, String attacker_port, String attacker, String to_host){
-            this.Name = Name;
-            this.Type = Type;
-            this.proto = proto;
-            this.host = host;
-            this.host_port = host_port;
-            this.attacker_port = attacker_port;
-            this.attacker = attacker;
-            this.to_host = to_host;
-        }
-    }
-    private static void checkpolicy(PolicyTemplete inEffect) {
-        if("".equals(inEffect.Name)){
+    public static String IPADDRESS_PATTERN =  "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
+    private static String Name;
+    private static String Type;
+    private static String proto;
+    private static String host;
+    private static String host_port;
+    private static String attacker_port;
+    private static String attacker;
+    private static String to_host;
+    private static void checkpolicy(){
+        if(Name.isEmpty()){
             System.out.println("Name missing in policy, please add one");
             System.exit(0);
-        }if("".equals(inEffect.Type)){
+        }if(Type.isEmpty()){
             System.out.println("Type missing in policy, please add one");
             System.exit(0);
-        }if(null != (inEffect.host)){
+        }if(host.isEmpty()){
             System.out.println("host missing in policy, please add one");
             System.exit(0);
-        }if("".equals(inEffect.host_port)){
+        }if(host_port.isEmpty()){
             System.out.println("host_port missing in policy, please add one");
             System.exit(0);
-        }if("".equals(inEffect.attacker_port)){
+        }if(attacker_port.isEmpty()){
             System.out.println("attacker_port missing in policy, please add one");
             System.exit(0);
-        }if("".equals(inEffect.attacker)){
+        }if(attacker.isEmpty()){
             System.out.println("attacker missing in policy, please add one");
             System.exit(0);
-        }if("".equals(inEffect.to_host)){
+        }if(to_host.isEmpty()){
             System.out.println("to_host missing in policy, please add one");
             System.exit(0);
         }
     }
-    private static void readpolicy(String policyFile, PolicyTemplete inEffect){
+    private static void readpolicy(String policyFile) throws IOException{
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new FileReader(policyFile));
-            String line = "";
             System.out.println("Building policy");
-            while ((line = br.readLine()) != null)
-            {
+            br = new BufferedReader(new FileReader(policyFile));  
+            String line = null;             
+            Boolean didThis = false;
+            while ((line = br.readLine()) != null){
+                System.out.println("" + line);
                 line = line.trim();
-                if(line.contains("host")){
+                if(line.contains("host") && didThis == false){
+                    line = line.trim();
                     Pattern pattern = Pattern.compile(IPADDRESS_PATTERN);
                     Matcher matcher = pattern.matcher(line);
                     if (matcher.find()){
-                        Ip4 ip = new Ip4();
-                        inEffect.host = InetAddress.getByName(matcher+"");
+                        host = matcher.matches() + "";
+                        didThis = true;
                     }
                     else{
                         System.out.println("No host found please repair policy file");
@@ -91,12 +85,15 @@ public class PcapReader {
                 }else if(line.contains("name")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
-                    inEffect.Name = line;
+                    line = line.trim();
+                    Name = line;
                 }else if(line.contains("type")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
+                    line = line.trim();
                     if(line.contains("stateful") || line.contains("stateless")){
-                        inEffect.Type = line;
+                        System.out.println("" + line);
+                        Type = line;
                     }
                     else{
                         System.out.println("Not stateless or stateful, must be set!!");
@@ -105,67 +102,75 @@ public class PcapReader {
                 }else if(line.contains("proto")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
-                    inEffect.proto = line;
+                    line = line.trim();
+                    proto = line;
                 }else if(line.contains("host_port")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
+                    line = line.trim();
                     if(line.contains("any") || ((Integer.parseInt(line) < 62001) && (Integer.parseInt(line) > 0))){
-                        inEffect.host_port = line;
+                        host_port = line;
                     }else{
                         System.out.print("Port is not in the range 1-62000 or any, Do not use ZERO");
                         }
                 }else if(line.contains("attacker_port")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
+                    line = line.trim();
                     if(line.contains("any") || ((Integer.parseInt(line) < 62001) && (Integer.parseInt(line) > 0))){
-                        inEffect.attacker_port = line;
+                        attacker_port = line;
                     }else{
                         System.out.print("Port is not in the range 1-62000 or any, Do not use ZERO");
                         }
                 }else if(line.contains("attacker")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
-                    inEffect.attacker = line;
+                    line = line.trim();
+                    attacker = line;
                 }else if(line.contains("to_host")){
                     int i = line.indexOf("=");
                     line = line.substring(i+1, line.length());
-                    inEffect.to_host = line;
+                    line = line.trim();
+                    to_host = line;
                 }
             }   
         } catch (FileNotFoundException ex) {
             Logger.getLogger(PcapReader.class.getName()).log(Level.SEVERE, null, ex);
-        } finally {
-            try {
-                br.close();
-            } catch (IOException ex) {
-                Logger.getLogger(PcapReader.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }       
+        }        
     }
-    public static void main(String[] args) {
-        String pcapFile = args[0];
-        String policyFile = args[1];
+    public static void main(String[] args) throws IOException {
+        String pcapFile;
+        String policyFile;
+        System.out.println("Importing Pcap File");
+        pcapFile = "trace1.pcap"; //change here for new pcap file
+        //pcapFile = args[0]; //import pcap
+        System.out.println("Imported");
+        System.out.println("Importing Policy File");
+        policyFile = "./policy1.txt"; //change here for new policy file
+        //policyFile = args[1]; //import policy
+        System.out.println("Imported");
         pcapRead(pcapFile, policyFile);
     }  
 
-    public static void pcapRead(String pcapFile, String policyFile) {  
+    public static void pcapRead(String pcapFile, String policyFile) throws IOException {  
         //Creating policy Class
-        PolicyTemplete inEffect;
         //setting all policy to null
-        inEffect = PolicyTemplete(null, null, null, null, null, null, null, null);
         //Building Policy
-        readpolicy(policyFile, inEffect);
-        checkpolicy(inEffect);
-        checkpcap(inEffect, pcapFile);
+        readpolicy(policyFile);
+        //checkpolicy();
+        checkpcap(pcapFile);
     }
-    public static Pcap checkpcap(PolicyTemplete inEffect, String pcapFile) {
+    public static Pcap checkpcap(String pcapFile) {
+        Boolean state= false;
         StringBuilder errbuf = new StringBuilder(); 
         //Opening capture file
         final Pcap pcap = Pcap.openOffline(pcapFile, errbuf);
         String line = "";
         System.out.println("Scanning");
         //Set for stateless or stateful
-        Boolean state = inEffect.Type.equalsIgnoreCase("stateful");
+        if("stateful".contains(Type)){
+            state = true;}
+        System.out.println("Setting State");
         if (pcap == null) {  
             System.err.println(errbuf); // Error is stored in errbuf if any  
         }
@@ -174,26 +179,60 @@ public class PcapReader {
             JFlowMap superFlowMap = new JFlowMap();
             pcap.loop(Pcap.LOOP_INFINITE, superFlowMap, null);
             }
-        final PcapPacket packet = new PcapPacket(JMemory.POINTER);  
-        final Tcp tcp = new Tcp();  
+        PcapPacket packet = new PcapPacket(JMemory.POINTER);  
+        Tcp tcp = new Tcp();  
         pcap.loop(-1, new JPacketHandler<StringBuilder>(){
             Tcp tcp = new Tcp();
             Ip4 ip = new Ip4();
             Http http = new Http();
+            Udp udp = new Udp();
+            @Override
             public void nextPacket(JPacket packet, StringBuilder errbuf){
-                if(packet.hasHeader(ip) && packet.hasHeader(tcp)){
-                    if(Integer.parseInt(inEffect.host) == Integer.parseInt(ip)){
-                        
+                switch (proto)
+                {
+                    case "tcp":{
+                        if(packet.hasHeader(ip) && packet.hasHeader(tcp)){
+                            if((Integer.getInteger(host_port) == tcp.destination())|| "any".equals(host_port)){
+                                if(host.equals(ip.destination().toString())|| "any".equals(host)){
+                                    if(to_host.contains(packet.toString()) || "any".equals(to_host)){
+                                        System.out.printf("tcp header::%s%n", tcp.toString());
+                                    }                                        
+                                }
+                            }
+                        }break;
+                    }
+                    case "udp":{
+                        if(packet.hasHeader(ip) && packet.hasHeader(udp)){
+                            if((Integer.getInteger(host_port) == udp.destination())|| "any".equals(host_port)){
+                                if(host.equals(ip.destination().toString())|| host == "any"){
+                                    if(to_host.contains(packet.toString()) || "any".equals(to_host)){
+                                        System.out.printf("udp header::%s%n", udp.toString());
+                                    }                                        
+                                }
+                            }
+                        }break;
+                    }
+                    default:{
+                        if(packet.hasHeader(ip) && packet.hasHeader(udp)){
+                            if((Integer.getInteger(host_port) == udp.destination())|| "any".equals(host_port)){
+                                if(host.equals(ip.destination().toString())|| "any".equals(host)){
+                                    if(to_host.contains(packet.toString()) || "any".equals(to_host)){
+                                        System.out.printf("header::%s%n", packet.toString());
+                                    }                                        
+                                }
+                            }
+                        }break;
                     }
                 }
-                if(packet.toString().contains(inEffect.to_host)){
-                    System.out.printf("tcp header::%s%n", tcp.toString());
-                }
-                if(packet.hasHeader(Tcp.ID))
-                    packet.getHeader(tcp);
-                if (packet.hasHeader(tcp) && packet.hasHeader(http)){
-                }
             }
-            }, errbuf);
+        }, errbuf);
         return null;}
+    private static byte[][] convertToBytes(String[] strings) {
+        byte[][] data = new byte[strings.length][];
+        for (int i = 0; i < strings.length; i++) {
+            String string = strings[i];
+            data[i] = string.getBytes(Charset.defaultCharset()); // you can chose charset
+        }
+        return data;
+    }
     }
