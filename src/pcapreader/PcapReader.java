@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.logging.Logger;
@@ -191,11 +192,14 @@ public class PcapReader {
                 switch (proto)
                 {
                     case "tcp":{
+                        int host_portInt = 0;
                         packet.getHeader(tcp);
                         if(packet.hasHeader(Tcp.ID) && packet.hasHeader(tcp)){
-                            if((Integer.getInteger(host_port) == tcp.source()) || "any".equals(host_port)){
-                                if(host.equals(ip.destination().toString())|| "any".equals(host)){
-                                    if(to_host.contains(packet.toString()) || "any".equals(to_host)){
+                            if(!"any".equalsIgnoreCase(host_port) && !host_port.isEmpty()){
+                                host_portInt = Integer.parseInt(host_port);}
+                            if((host_portInt == tcp.source()) || "any".equalsIgnoreCase(host_port)){
+                                if( (host == null ? Arrays.toString(ip.destination()) == null : host.equals(Arrays.toString(ip.destination()))) || "any".equalsIgnoreCase(host)){
+                                    if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
                                         System.out.printf("tcp header::%s%n", tcp.toString());
                                     }                                        
                                 }
@@ -204,9 +208,9 @@ public class PcapReader {
                     }
                     case "udp":{
                         if(packet.hasHeader(ip) && packet.hasHeader(udp)){
-                            if((Integer.getInteger(host_port) == udp.source())|| "any".equals(host_port)){
-                                if(host.equals(ip.destination().toString())|| host == "any"){
-                                    if(to_host.contains(packet.toString()) || "any".equals(to_host)){
+                            if((Integer.getInteger(host_port) == udp.source())|| "any".equalsIgnoreCase(host_port)){
+                                if(host.equalsIgnoreCase(Arrays.toString(ip.destination()))|| "any".equalsIgnoreCase(host)){
+                                    if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
                                         System.out.printf("udp header::%s%n", udp.toString());
                                     }                                        
                                 }
@@ -215,9 +219,9 @@ public class PcapReader {
                     }
                     default:{
                         if(packet.hasHeader(ip) && packet.hasHeader(udp)){
-                            if((Integer.getInteger(host_port) == udp.source())|| "any".equals(host_port)){
-                                if(host.equals(ip.destination().toString())|| "any".equals(host)){
-                                    if(to_host.contains(packet.toString()) || "any".equals(to_host)){
+                            if((Integer.getInteger(host_port) == udp.source())|| "any".equalsIgnoreCase(host_port)){
+                                if(host.equalsIgnoreCase(ip.destination().toString())|| "any".equalsIgnoreCase(host)){
+                                    if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
                                         System.out.printf("header::%s%n", packet.toString());
                                     }                                        
                                 }

@@ -32,72 +32,8 @@
 #define SDP_ID           org_jnetpcap_protocol_JProtocol_SDP_ID
 #define RTP_ID           org_jnetpcap_protocol_JProtocol_RTP_ID
 #define SLL_ID           org_jnetpcap_protocol_JProtocol_SLL_ID
-
-#define SCTP_ID              org_jnetpcap_protocol_JProtocol_SCTP_ID
-#define SCTP_CHUNK_ID        org_jnetpcap_protocol_JProtocol_SCTP_DATA_ID
-#define SCTP_DATA_ID         org_jnetpcap_protocol_JProtocol_SCTP_DATA_ID
-#define SCTP_INIT_ID         org_jnetpcap_protocol_JProtocol_SCTP_INIT_ID
-#define SCTP_INIT_ACK_ID     org_jnetpcap_protocol_JProtocol_SCTP_INIT_ACK_ID
-#define SCTP_SACK_ID         org_jnetpcap_protocol_JProtocol_SCTP_SACK_ID
-#define SCTP_HEARTBEAT_ID    org_jnetpcap_protocol_JProtocol_SCTP_HEARTBEAT_ID
-#define SCTP_HEARTBEAT_ACK_ID    org_jnetpcap_protocol_JProtocol_SCTP_HEARTBEAT_ACK_ID
-#define SCTP_ABORT_ID        org_jnetpcap_protocol_JProtocol_SCTP_ABORT_ID
-#define SCTP_SHUTDOWN_ID     org_jnetpcap_protocol_JProtocol_SCTP_SHUTDOWN_ID
-#define SCTP_SHUTDOWN_ACK_ID org_jnetpcap_protocol_JProtocol_SCTP_SHUTDOWN_ACK_ID
-#define SCTP_ERROR_ID        org_jnetpcap_protocol_JProtocol_SCTP_ERROR_ID
-#define SCTP_COOKIE_ID       org_jnetpcap_protocol_JProtocol_SCTP_COOKIE_ID
-#define SCTP_COOKIE_ACK_ID   org_jnetpcap_protocol_JProtocol_SCTP_COOKIE_ACK_ID
-#define SCTP_ECNE_ID         org_jnetpcap_protocol_JProtocol_SCTP_ECNE_ID
-#define SCTP_CWR_ID          org_jnetpcap_protocol_JProtocol_SCTP_CWR_ID
-#define SCTP_SHUTDOWN_COMPLETE_ID org_jnetpcap_protocol_JProtocol_SCTP_SHUTDOWN_COMPLETE_ID
-
-#define RTCP_ID 		org_jnetpcap_protocol_JProtocol_RTCP_SENDER_REPORT_ID
-#define RTCP_CHUNK_ID 		org_jnetpcap_protocol_JProtocol_RTCP_SENDER_REPORT_ID
-#define RTCP_SENDER_REPORT_ID org_jnetpcap_protocol_JProtocol_RTCP_SENDER_REPORT_ID
-#define RTCP_RECEIVER_REPORT_ID org_jnetpcap_protocol_JProtocol_RTCP_RECEIVER_REPORT_ID
-#define RTCP_SDES_ID org_jnetpcap_protocol_JProtocol_RTCP_SDES_ID
-#define RTCP_BYE_ID org_jnetpcap_protocol_JProtocol_RTCP_BYE_ID
-#define RTCP_APP_ID org_jnetpcap_protocol_JProtocol_RTCP_APP_ID
-
-#define NULL_HEADER_ID org_jnetpcap_protocol_JProtocol_NULL_HEADER_ID
-
 #define WEB_IMAGE_ID        org_jnetpcap_protocol_JProtocol_WEB_IMAGE_ID
 
-#define NETBIOS_ID END_OF_HEADERS
-
-typedef struct null_header_ {
-
-	uint32_t	type; // PF_ protocol family type
-
-} null_header_t;
-
-#define SCTP_DATA_FLAG_LAST_SEG		0x01
-#define SCTP_DATA_FLAG_FIRST_SEG	0x02
-#define SCTP_DATA_FLAG_ORDERED		0x04
-#define SCTP_DATA_FLAG_DELAY		0x08
-/**
- * SCTP Chunk
- */
-typedef struct sctp_chunk_ {
-
-	uint8_t		type;
-	uint8_t		flags;
-	uint16_t	length;
-
-} sctp_chunk_t;
-
-#define SCTP_LEN	12
-/**
- * Stream Control Transport Protocol
- */
-typedef struct sctp_ {
-
-	uint16_t	sport;
-	uint16_t	dport;
-	uint32_t	tag;
-	uint32_t	crc32;
-
-} sctp_t;
 
 /*
  * Linux Socket Cooked Capture header - a pseudo header as DL substitute
@@ -106,11 +42,11 @@ typedef struct sctp_ {
 #define SLL_ADDR_LEN	8		      // length of address field
 
 typedef struct sll_t {
-	uint16_t	sll_pkttype;	          // packet type
-	uint16_t	sll_hatype;	            // link-layer address type
-	uint16_t	sll_halen;	            // link-layer address length
-	uint8_t		sll_addr[SLL_ADDR_LEN];	// link-layer address
-	uint16_t	sll_protocol;         	// protocol
+	u_int16_t	sll_pkttype;	          // packet type
+	u_int16_t	sll_hatype;	            // link-layer address type
+	u_int16_t	sll_halen;	            // link-layer address length
+	u_int8_t	sll_addr[SLL_ADDR_LEN];	// link-layer address
+	u_int16_t	sll_protocol;         	// protocol
 } sll_t;
 
 /*
@@ -125,65 +61,6 @@ typedef struct rtpx_t {
 	uint16_t	rtpx_len;		// Length of extension header
 	
 } rtpx_t;
-
-/*
- *  RTP and RTCP family of protocols
- *  See RFC3550
- */
-
-/**
- * RTCP SSRC Sender Report (section 3 of the header)
- */
-typedef struct rtcp_ssrc_ {
-	uint32_t	ssrc_id; // SSRC identifier of the source
-	uint32_t	ssrc_fract_loss:8; // Fraction of RTP data lost
-	uint32_t	ssrc_total_loss:24; // Cumulative of RTP data lost
-	uint32_t	ssrc_high_seq; // Extended highest seq received
-	uint32_t	ssrc_jitter; // Interarrival Jitter
-	uint32_t	ssrc_lsr; // Last SR timestamp
-	uint32_t	ssrc_dlsr; // Delay since last SR
-
-} rtcp_ssrc_t;
-
-/*
- * RTCP Sender Report (SR)
- * (Section 2 of the header)
- */
-typedef struct rtcp_sr_ {
-
-	uint64_t	sr_ntp; // NTP timestamp
-	uint32_t	sr_pkt_count; // Sender's packet count
-	uint32_t	sr_octet_count; // Sender's octet count
-
-} rtcp_sr_t;
-
-/*
- * RTCP - main static header present in every RTCP packet.
- * RTCP packets are always on odd port number, while RTP on even (see RFC3550)
- * (Section 1 of the header)
- */
-typedef struct rtcp_ {
-
-#  if __BYTE_ORDER == __LITTLE_ENDIAN
-	uint8_t 	rtcp_rc:5; // Reception Report Count (RC)
-	uint8_t 	rtcp_pad:1;
-	uint8_t		rtcp_ver:2; // Must be 2
-
-#  elif __BYTE_ORDER == __BIG_ENDIAN
-	uint8_t		rtcp_ver:2; // Must be 2
-	uint8_t 	rtcp_pad:1;
-	uint8_t 	rtcp_rc:5; // Reception Report Count (RC)
-
-#  else
-#   error "Adjust your <bits/endian.h> defines"
-#  endif
-
-	uint8_t		rtcp_type; // SR==200, RR==201
-	uint16_t	rtcp_len;  // 32-bit word count (including header -1)
-	uint32_t	rtcp_ssrc; // Synchronization source ID
-
-} rtcp_t;
-
 
 typedef struct rtp_t {
 
@@ -212,6 +89,7 @@ typedef struct rtp_t {
 	uint16_t	rtp_seq;
 	uint32_t	rtp_ts;
 	uint32_t	rtp_ssrc;
+
 
 } rtp_t;
 
