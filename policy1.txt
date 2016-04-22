@@ -1,8 +1,9 @@
 host=192.168.0.1
-name=Blame Attack 1
+name=TFTP attacker boot
 type=stateless
-proto=tcp
-host_port=5551
-attacker_port=any
+proto=udp
+host_port=any
+attacker_port=69
 attacker=any
-to_host="Now I own your computer"
+from_host="vmlinuz"
+to_host="\x00\x03\x00\x01"
