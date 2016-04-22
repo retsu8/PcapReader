@@ -195,14 +195,14 @@ public class PcapReader {
                         int host_portInt = 0;
                         packet.getHeader(tcp);
                         if(packet.hasHeader(Tcp.ID) && packet.hasHeader(tcp)){
-                            if(!"any".equalsIgnoreCase(host_port) && !host_port.isEmpty()){
+                            if(isInteger(host_port)){
                                 host_portInt = Integer.parseInt(host_port);}
                             if((host_portInt == tcp.source()) || "any".equalsIgnoreCase(host_port)){
-                                if( (host == null ? Arrays.toString(ip.destination()) == null : host.equals(Arrays.toString(ip.destination()))) || "any".equalsIgnoreCase(host)){
+                                //if( (host == null ? Arrays.toString(ip.destination()) == null : host.equals(Arrays.toString(ip.destination()))) || "any".equalsIgnoreCase(host)){
                                     if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
                                         System.out.printf("tcp header::%s%n", tcp.toString());
                                     }                                        
-                                }
+                                //}
                             }
                         }break;
                     }
@@ -240,4 +240,19 @@ public class PcapReader {
         }
         return data;
     }
+    public static boolean isInteger(String s) {
+            return isInteger(s,10);
+        }
+
+        public static boolean isInteger(String s, int radix) {
+            if(s.isEmpty()) return false;
+            for(int i = 0; i < s.length(); i++) {
+                if(i == 0 && s.charAt(i) == '-') {
+                    if(s.length() == 1) return false;
+                    else continue;
+                }
+                if(Character.digit(s.charAt(i),radix) < 0) return false;
+            }
+            return true;
+        }
     }
