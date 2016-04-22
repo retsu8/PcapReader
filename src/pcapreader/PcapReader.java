@@ -198,11 +198,11 @@ public class PcapReader {
                             if(isInteger(host_port)){
                                 host_portInt = Integer.parseInt(host_port);}
                             if((host_portInt == tcp.source()) || "any".equalsIgnoreCase(host_port)){
-                                //if( (host == null ? Arrays.toString(ip.destination()) == null : host.equals(Arrays.toString(ip.destination()))) || "any".equalsIgnoreCase(host)){
+                                if(host.contains("") &&(host.equals(ip.destination().toString())) || "any".equalsIgnoreCase(host)){
                                     if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
                                         System.out.printf("tcp header::%s%n", tcp.toString());
                                     }                                        
-                                //}
+                                }
                             }
                         }break;
                     }
