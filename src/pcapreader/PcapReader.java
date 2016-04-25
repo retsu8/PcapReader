@@ -27,18 +27,17 @@ public class PcapReader {
 
     public static JFlowMap superFlowMap;
     public static Boolean found;
-
     public final Pcap pcap = null;
     public static String IPADDRESS_PATTERN =  "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
-    private static String Name;
-    private static String Type;
-    private static String proto;
-    private static String host;
-    private static String host_port;
-    private static String attacker_port;
-    private static String attacker;
-    private static String to_host;
-    private static void checkpolicy(){
+    public static String Name;
+    public static String Type;
+    public static String proto;
+    public static String host;
+    public static String host_port;
+    public static String attacker_port;
+    public static String attacker;
+    public static String to_host;
+    public static void checkpolicy(){
         if(Name.isEmpty()){
             System.out.println("Name missing in policy, please add one");
             System.exit(0);
@@ -144,9 +143,6 @@ public class PcapReader {
         File policyDir = new File("./Policy");
         File[] pcapListing = pcapDir.listFiles();
         File[] policyListing = policyDir.listFiles();
-        int[][] array = null;
-        int i =0;
-        int j = 0;
         if(policyListing != null){
             for(File policy : policyListing){
                 policyFile = policy.toString();
@@ -159,17 +155,14 @@ public class PcapReader {
                     if(found){
                         System.out.println("1");
                     }
-                    i++;
+                    else{System.out.println("0");}
                     }                
-                }j++;
+                }
             }
         }
     }  
 
     public static void pcapRead(String pcapFile, String policyFile) throws IOException {  
-        //Creating policy Class
-        //setting all policy to null
-        //Building Policy
         readpolicy(policyFile);
         //checkpolicy();
         checkpcap(pcapFile);
@@ -203,6 +196,7 @@ public class PcapReader {
                 switch (proto)
                 {
                     case "tcp":{
+                        System.out.print(host);
                         PcapBpfProgram program = new PcapBpfProgram();
                         String expression = "host " + host;
                         int optimize = 0;         // 0 = false
