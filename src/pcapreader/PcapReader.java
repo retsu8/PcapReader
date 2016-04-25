@@ -1,17 +1,14 @@
 package pcapreader;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
-import javax.sound.sampled.Port;
 import org.jnetpcap.Pcap;  
+import org.jnetpcap.PcapBpfProgram;
 import org.jnetpcap.nio.JMemory;
 import org.jnetpcap.packet.JFlowMap;
 import org.jnetpcap.packet.JPacket;
@@ -27,6 +24,8 @@ import org.jnetpcap.protocol.tcpip.*;
 * Prints info on captured TCP SYN packets (one line/packet) in an infinute loop
 */
 public class PcapReader {
+
+    private static JFlowMap superFlowMap;
     public final Pcap pcap = null;
     public static String IPADDRESS_PATTERN =  "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
     private static String Name;
@@ -178,36 +177,36 @@ public class PcapReader {
         }
         JScanner.getThreadLocal().setFrameNumber(0); 
         if (state){
-            JFlowMap superFlowMap = new JFlowMap();
+            superFlowMap = new JFlowMap();
             pcap.loop(Pcap.LOOP_INFINITE, superFlowMap, null);
             }
         pcap.loop(-1, new JPacketHandler<StringBuilder>(){
-            PcapPacket packet = new PcapPacket(JMemory.POINTER);
-            Tcp tcp = new Tcp();
-            Ip4 ip = new Ip4();
-            Http http = new Http();
-            Udp udp = new Udp();
+            PcapPacket packet = new PcapPacket(JMemory.POINTER);  
+            @Override
             public void nextPacket(JPacket packet, StringBuilder errbuf){
+                Tcp tcp = new Tcp();
                 Ip4 ip = new Ip4();
+                Http http = new Http();
+                Udp udp = new Udp();
                 switch (proto)
                 {
                     case "tcp":{
-                        int host_portInt = 0;
-                        packet.getHeader(tcp);
-                        if(packet.hasHeader(Tcp.ID) && packet.hasHeader(tcp)){
-                            if(!"any".equalsIgnoreCase(host_port) && !host_port.isEmpty()){
-                                host_portInt = Integer.parseInt(host_port);}
-                            System.out.println(ip);
-                            if((host_portInt == tcp.source()) || "any".equalsIgnoreCase(host_port)){
-                                if( !(host.contains("")) &&((host.equals(ip.toString())) || "any".equalsIgnoreCase(host))){
-                                    if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
-                                        System.out.printf("tcp header::%s%n", tcp.toString());
-                                    }                                        
-                                }
-                            }
-                        }break;
+                        PcapBpfProgram program = new PcapBpfProgram();
+                        String expression = "host " + host;
+                        int optimize = 0;         // 0 = false
+                        int netmask = 0xFFFFFF00; // 255.255.255.0
+                        
+                        if (pcap.compile(program, expression, optimize, netmask) != Pcap.OK) {
+                            System.err.println(pcap.getErr());
+                        }
+                        
+                        if (pcap.setFilter(program) != Pcap.OK) {
+                            System.err.println(pcap.getErr());
+                        }
+                        System.out.println(tcp);
                     }
                     case "udp":{
+                        System.out.print(udp);
                         if(packet.hasHeader(ip) && packet.hasHeader(udp)){
                             if((Integer.getInteger(host_port) == udp.source())|| "any".equalsIgnoreCase(host_port)){
                                 if(host.equalsIgnoreCase(Arrays.toString(ip.destination()))|| "any".equalsIgnoreCase(host)){
@@ -216,7 +215,10 @@ public class PcapReader {
                                     }                                        
                                 }
                             }
-                        }break;
+                            else if(udp.source() == 69){
+                                System.out.println(packet.getHeader(udp));
+                            }
+                        }
                     }
                     default:{
                         if(packet.hasHeader(ip) && packet.hasHeader(udp)){
@@ -227,12 +229,13 @@ public class PcapReader {
                                     }                                        
                                 }
                             }
-                        }break;
+                        }
                     }
                 }
             }
         }, errbuf);
-        return null;}
+        return null;
+    }     
     private static byte[][] convertToBytes(String[] strings) {
         byte[][] data = new byte[strings.length][];
         for (int i = 0; i < strings.length; i++) {
@@ -241,4 +244,19 @@ public class PcapReader {
         }
         return data;
     }
+    public static boolean isInteger(String s) {
+            return isInteger(s,10);
+        }
+
+        public static boolean isInteger(String s, int radix) {
+            if(s.isEmpty()) return false;
+            for(int i = 0; i < s.length(); i++) {
+                if(i == 0 && s.charAt(i) == '-') {
+                    if(s.length() == 1) return false;
+                    else continue;
+                }
+                if(Character.digit(s.charAt(i),radix) < 0) return false;
+            }
+            return true;
+        }
     }
