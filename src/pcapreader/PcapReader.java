@@ -25,7 +25,9 @@ import org.jnetpcap.protocol.tcpip.*;
 */
 public class PcapReader {
 
-    private static JFlowMap superFlowMap;
+    public static JFlowMap superFlowMap;
+    public static Boolean found;
+
     public final Pcap pcap = null;
     public static String IPADDRESS_PATTERN =  "(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
     private static String Name;
@@ -63,12 +65,10 @@ public class PcapReader {
     private static void readpolicy(String policyFile) throws IOException{
         BufferedReader br = null;
         try {
-            System.out.println("Building policy");
             br = new BufferedReader(new FileReader(policyFile));  
             String line = null;             
             Boolean didThis = false;
             while ((line = br.readLine()) != null){
-                System.out.println("" + line);
                 line = line.trim();
                 if(line.contains("host") && didThis == false){
                     line = line.trim();
@@ -92,7 +92,6 @@ public class PcapReader {
                     line = line.substring(i+1, line.length());
                     line = line.trim();
                     if(line.contains("stateful") || line.contains("stateless")){
-                        System.out.println("" + line);
                         Type = line;
                     }
                     else{
@@ -141,15 +140,30 @@ public class PcapReader {
     public static void main(String[] args) throws IOException {
         String pcapFile;
         String policyFile;
-        System.out.println("Importing Pcap File");
-        pcapFile = "trace1.pcap"; //change here for new pcap file
-        //pcapFile = args[0]; //import pcap
-        System.out.println("Imported");
-        System.out.println("Importing Policy File");
-        policyFile = "./policy1.txt"; //change here for new policy file
-        //policyFile = args[1]; //import policy
-        System.out.println("Imported");
-        pcapRead(pcapFile, policyFile);
+        File pcapDir = new File("./pcapFiles");
+        File policyDir = new File("./Policy");
+        File[] pcapListing = pcapDir.listFiles();
+        File[] policyListing = policyDir.listFiles();
+        int[][] array = null;
+        int i =0;
+        int j = 0;
+        if(policyListing != null){
+            for(File policy : policyListing){
+                policyFile = policy.toString();
+                System.out.println("Policy " + policy);
+                if (pcapListing != null) {
+                    for (File pcap : pcapListing){
+                    System.out.println("PCap " + pcap);
+                    pcapFile = pcap.toString(); //pcap here for new pcap file
+                    pcapRead(pcapFile, policyFile);
+                    if(found){
+                        System.out.println("1");
+                    }
+                    i++;
+                    }                
+                }j++;
+            }
+        }
     }  
 
     public static void pcapRead(String pcapFile, String policyFile) throws IOException {  
@@ -161,17 +175,15 @@ public class PcapReader {
         checkpcap(pcapFile);
     }
     public static Pcap checkpcap(String pcapFile) {
-        System.out.println("Policy Name " + Name);
+        found = false;
         Boolean state= false;
         StringBuilder errbuf = new StringBuilder(); 
         //Opening capture file
         final Pcap pcap = Pcap.openOffline(pcapFile, errbuf);
         String line = "";
-        System.out.println("Scanning");
         //Set for stateless or stateful
         if("stateful".contains(Type)){
             state = true;}
-        System.out.println("Setting State");
         if (pcap == null) {  
             System.err.println(errbuf); // Error is stored in errbuf if any  
         }
@@ -203,20 +215,21 @@ public class PcapReader {
                         if (pcap.setFilter(program) != Pcap.OK) {
                             System.err.println(pcap.getErr());
                         }
-                        System.out.println(tcp);
+                        found = true;
                     }
                     case "udp":{
-                        System.out.print(udp);
                         if(packet.hasHeader(ip) && packet.hasHeader(udp)){
                             if((Integer.getInteger(host_port) == udp.source())|| "any".equalsIgnoreCase(host_port)){
                                 if(host.equalsIgnoreCase(Arrays.toString(ip.destination()))|| "any".equalsIgnoreCase(host)){
                                     if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
-                                        System.out.printf("udp header::%s%n", udp.toString());
+                                        found = true;
                                     }                                        
                                 }
                             }
                             else if(udp.source() == 69){
-                                System.out.println(packet.getHeader(udp));
+                                    if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
+                                    found = true;
+                                }
                             }
                         }
                     }
@@ -225,7 +238,7 @@ public class PcapReader {
                             if((Integer.getInteger(host_port) == udp.source())|| "any".equalsIgnoreCase(host_port)){
                                 if(host.equalsIgnoreCase(ip.destination().toString())|| "any".equalsIgnoreCase(host)){
                                     if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
-                                        System.out.printf("header::%s%n", packet.toString());
+                                        found = true;
                                     }                                        
                                 }
                             }
