@@ -181,14 +181,14 @@ public class PcapReader {
             JFlowMap superFlowMap = new JFlowMap();
             pcap.loop(Pcap.LOOP_INFINITE, superFlowMap, null);
             }
-        PcapPacket packet = new PcapPacket(JMemory.POINTER);  
-        Tcp tcp = new Tcp();  
         pcap.loop(-1, new JPacketHandler<StringBuilder>(){
+            PcapPacket packet = new PcapPacket(JMemory.POINTER);
             Tcp tcp = new Tcp();
             Ip4 ip = new Ip4();
             Http http = new Http();
             Udp udp = new Udp();
             public void nextPacket(JPacket packet, StringBuilder errbuf){
+                Ip4 ip = new Ip4();
                 switch (proto)
                 {
                     case "tcp":{
@@ -197,8 +197,9 @@ public class PcapReader {
                         if(packet.hasHeader(Tcp.ID) && packet.hasHeader(tcp)){
                             if(!"any".equalsIgnoreCase(host_port) && !host_port.isEmpty()){
                                 host_portInt = Integer.parseInt(host_port);}
+                            System.out.println(ip);
                             if((host_portInt == tcp.source()) || "any".equalsIgnoreCase(host_port)){
-                                if(host.contains("") &&(host.equals(ip.destination().toString())) || "any".equalsIgnoreCase(host)){
+                                if( !(host.contains("")) &&((host.equals(ip.toString())) || "any".equalsIgnoreCase(host))){
                                     if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
                                         System.out.printf("tcp header::%s%n", tcp.toString());
                                     }                                        
