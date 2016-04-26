@@ -1,5 +1,5 @@
 /bin/python
-import nfqueue
+import nfqueue, iptables, os
 from dpkt import ip
 
 q = None
