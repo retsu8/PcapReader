@@ -67,7 +67,6 @@ public class PcapReader {
             String line = null;             
             Boolean didThis = false;
             while ((line = br.readLine()) != null){
-                System.out.println(line);
                 line = line.trim();
                 if(line.contains("host") && didThis == false){
                     line = line.trim();
@@ -208,7 +207,7 @@ public class PcapReader {
                         }
                     }
                     case "udp":{
-                        if(packet.hasHeader(ip) && packet.hasHeader(udp)){
+                        if(packet.hasHeader(udp)){
                             if(udp.source() == host_port){
                                 StringBuilder str = new StringBuilder();
                                 packet.getUTF8String(0, str, packet.getTotalSize());
@@ -224,12 +223,14 @@ public class PcapReader {
                         }
                     }
                     default:{
-                        if(packet.hasHeader(ip) && packet.hasHeader(udp)){
-                            if((host_port == udp.source())|| host_port != -1){
-                                if(host.equalsIgnoreCase(ip.destination().toString())|| "any".equalsIgnoreCase(host)){
-                                    if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
-                                        found = true;
-                                    }                                        
+                        if(packet.hasHeader(udp)){StringBuilder str = new StringBuilder();
+                            packet.getUTF8String(0, str, packet.getTotalSize());
+                            String rawStringData = str.toString();
+                            if(rawStringData.contains(to_host))
+                                found = true;
+                            else if(udp.source() == 69){
+                                    if(rawStringData.contains(to_host) || "any".equalsIgnoreCase(to_host)){
+                                    found = true;
                                 }
                             }
                         }
