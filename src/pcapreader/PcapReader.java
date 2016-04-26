@@ -66,13 +66,14 @@ public class PcapReader {
             String line = null;             
             Boolean didThis = false;
             while ((line = br.readLine()) != null){
+                System.out.println(line);
                 line = line.trim();
                 if(line.contains("host") && didThis == false){
                     line = line.trim();
                     Pattern pattern = Pattern.compile(IPADDRESS_PATTERN);
                     Matcher matcher = pattern.matcher(line);
                     if (matcher.find()){
-                        host = matcher.matches() + "";
+                        host = matcher.group() + "";
                         didThis = true;
                     }
                     else{
@@ -143,8 +144,8 @@ public class PcapReader {
         File[] policyListing = policyDir.listFiles();
         if(policyListing != null){
             for(File policy : policyListing){
-                policyFile = new BufferedReader(new FileReader(policy));;
-                System.out.println("Policy " + policy);
+                policyFile = new BufferedReader(new InputStreamReader( new FileInputStream(policy), "utf-8"));
+                System.out.println(policy);
                 if (pcapListing != null) {
                     for (File pcap : pcapListing){
                     System.out.println("PCap " + pcap);
@@ -194,7 +195,6 @@ public class PcapReader {
                 switch (proto)
                 {
                     case "tcp":{
-                        System.out.print(host);
                         PcapBpfProgram program = new PcapBpfProgram();
                         String expression = "host " + host;
                         int optimize = 0;         // 0 = false
