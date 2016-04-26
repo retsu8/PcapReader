@@ -139,8 +139,8 @@ public class PcapReader {
     public static void main(String[] args) throws IOException {
         String pcapFile;
         String policyFile;
-        File pcapDir = new File("./pcapFiles");
-        File policyDir = new File("./Policy");
+        File pcapDir = new File(args[0]);
+        File policyDir = new File(args[1]);
         File[] pcapListing = pcapDir.listFiles();
         File[] policyListing = policyDir.listFiles();
         if(policyListing != null){
