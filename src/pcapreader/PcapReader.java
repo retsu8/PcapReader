@@ -61,10 +61,8 @@ public class PcapReader {
             System.exit(0);
         }
     }
-    private static void readpolicy(String policyFile) throws IOException{
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new FileReader(policyFile));  
+    private static void readpolicy(BufferedReader br) throws IOException{
+        try {  
             String line = null;             
             Boolean didThis = false;
             while ((line = br.readLine()) != null){
@@ -138,14 +136,14 @@ public class PcapReader {
     }
     public static void main(String[] args) throws IOException {
         String pcapFile;
-        String policyFile;
+        BufferedReader policyFile = null;
         File pcapDir = new File(args[0]);
         File policyDir = new File(args[1]);
         File[] pcapListing = pcapDir.listFiles();
         File[] policyListing = policyDir.listFiles();
         if(policyListing != null){
             for(File policy : policyListing){
-                policyFile = policy.toString();
+                policyFile = new BufferedReader(new FileReader(policy));;
                 System.out.println("Policy " + policy);
                 if (pcapListing != null) {
                     for (File pcap : pcapListing){
@@ -162,7 +160,7 @@ public class PcapReader {
         }
     }  
 
-    public static void pcapRead(String pcapFile, String policyFile) throws IOException {  
+    public static void pcapRead(String pcapFile, BufferedReader policyFile) throws IOException {  
         readpolicy(policyFile);
         //checkpolicy();
         checkpcap(pcapFile);
