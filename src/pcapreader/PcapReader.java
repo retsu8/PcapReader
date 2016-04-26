@@ -17,6 +17,7 @@ import org.jnetpcap.packet.JScanner;
 import org.jnetpcap.packet.PcapPacket;
 import org.jnetpcap.protocol.network.Ip4;
 import org.jnetpcap.protocol.tcpip.*;
+
 /*
  * @author William Paddock, CSCI 476
  */
@@ -33,8 +34,8 @@ public class PcapReader {
     public static String Type;
     public static String proto;
     public static String host;
-    public static String host_port;
-    public static String attacker_port;
+    public static int host_port;
+    public static int attacker_port;
     public static String attacker;
     public static String to_host;
     public static void checkpolicy(){
@@ -47,10 +48,10 @@ public class PcapReader {
         }if(host.isEmpty()){
             System.out.println("host missing in policy, please add one");
             System.exit(0);
-        }if(host_port.isEmpty()){
+        }if(host_port == 0){
             System.out.println("host_port missing in policy, please add one");
             System.exit(0);
-        }if(attacker_port.isEmpty()){
+        }if(attacker_port == 0){
             System.out.println("attacker_port missing in policy, please add one");
             System.exit(0);
         }if(attacker.isEmpty()){
@@ -106,7 +107,9 @@ public class PcapReader {
                     line = line.substring(i+1, line.length());
                     line = line.trim();
                     if(line.contains("any") || ((Integer.parseInt(line) < 62001) && (Integer.parseInt(line) > 0))){
-                        host_port = line;
+                        
+                        if(isInteger(line, line.length()))
+                            host_port = Integer.parseInt(line);
                     }else{
                         System.out.print("Port is not in the range 1-62000 or any, Do not use ZERO");
                         }
@@ -115,7 +118,8 @@ public class PcapReader {
                     line = line.substring(i+1, line.length());
                     line = line.trim();
                     if(line.contains("any") || ((Integer.parseInt(line) < 62001) && (Integer.parseInt(line) > 0))){
-                        attacker_port = line;
+                        if(isInteger(line, line.length()))
+                           attacker_port = Integer.parseInt(line);
                     }else{
                         System.out.print("Port is not in the range 1-62000 or any, Do not use ZERO");
                         }
@@ -195,39 +199,33 @@ public class PcapReader {
                 switch (proto)
                 {
                     case "tcp":{
-                        PcapBpfProgram program = new PcapBpfProgram();
-                        String expression = "host " + host;
-                        int optimize = 0;         // 0 = false
-                        int netmask = 0xFFFFFF00; // 255.255.255.0
-                        
-                        if (pcap.compile(program, expression, optimize, netmask) != Pcap.OK) {
-                            System.err.println(pcap.getErr());
+                        if(packet.hasHeader(tcp) != false){
+                            StringBuilder str = new StringBuilder();
+                            packet.getUTF8String(0, str, packet.getTotalSize());
+                            String rawStringData = str.toString();
+                            if(rawStringData.contains(to_host))
+                                found = true;
                         }
-                        
-                        if (pcap.setFilter(program) != Pcap.OK) {
-                            System.err.println(pcap.getErr());
-                        }
-                        found = true;
                     }
                     case "udp":{
                         if(packet.hasHeader(ip) && packet.hasHeader(udp)){
-                            if((Integer.getInteger(host_port) == udp.source())|| "any".equalsIgnoreCase(host_port)){
-                                if(host.equalsIgnoreCase(Arrays.toString(ip.destination()))|| "any".equalsIgnoreCase(host)){
-                                    if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
-                                        found = true;
-                                    }                                        
-                                }
-                            }
-                            else if(udp.source() == 69){
-                                    if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
+                            if(udp.source() == host_port){
+                                StringBuilder str = new StringBuilder();
+                                packet.getUTF8String(0, str, packet.getTotalSize());
+                                String rawStringData = str.toString();
+                                if(rawStringData.contains(to_host))
                                     found = true;
+                                else if(udp.source() == 69){
+                                        if(rawStringData.contains(to_host) || "any".equalsIgnoreCase(to_host)){
+                                        found = true;
+                                    }
                                 }
-                            }
+                            }   
                         }
                     }
                     default:{
                         if(packet.hasHeader(ip) && packet.hasHeader(udp)){
-                            if((Integer.getInteger(host_port) == udp.source())|| "any".equalsIgnoreCase(host_port)){
+                            if((host_port == udp.source())|| host_port != -1){
                                 if(host.equalsIgnoreCase(ip.destination().toString())|| "any".equalsIgnoreCase(host)){
                                     if(to_host.contains(packet.toString()) || "any".equalsIgnoreCase(to_host)){
                                         found = true;
