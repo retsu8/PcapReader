@@ -13,8 +13,10 @@ import org.jnetpcap.nio.JMemory;
 import org.jnetpcap.packet.JFlowMap;
 import org.jnetpcap.packet.JPacket;
 import org.jnetpcap.packet.JPacketHandler;  
+import org.jnetpcap.packet.JRegistry;
 import org.jnetpcap.packet.JScanner;
 import org.jnetpcap.packet.PcapPacket;
+import org.jnetpcap.packet.format.FormatUtils;
 import org.jnetpcap.protocol.network.Ip4;
 import org.jnetpcap.protocol.tcpip.*;
 
@@ -198,12 +200,15 @@ public class PcapReader {
                 switch (proto)
                 {
                     case "tcp":{
-                        if(packet.hasHeader(tcp) != false){
-                            StringBuilder str = new StringBuilder();
-                            packet.getUTF8String(0, str, packet.getTotalSize());
-                            String rawStringData = str.toString();
-                            if(rawStringData.contains(to_host))
-                                found = true;
+                        if((packet.hasHeader(tcp) != false) && packet.hasHeader(ip)){
+                            String ipHuman = FormatUtils.ip(ip.destination());
+                            if(host.contains(ipHuman)){
+                                StringBuilder str = new StringBuilder();
+                                packet.getUTF8String(0, str, packet.getTotalSize());
+                                String rawStringData = str.toString();
+                                if(rawStringData.contains(to_host))
+                                    found = true;
+                            }
                         }
                     }
                     case "udp":{
