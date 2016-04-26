@@ -3,6 +3,9 @@ package pcapreader;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.logging.Logger;
@@ -10,6 +13,8 @@ import java.util.regex.Pattern;
 import org.jnetpcap.Pcap;  
 import org.jnetpcap.PcapBpfProgram;
 import org.jnetpcap.nio.JMemory;
+import org.jnetpcap.packet.JFlow;
+import org.jnetpcap.packet.JFlowKey;
 import org.jnetpcap.packet.JFlowMap;
 import org.jnetpcap.packet.JPacket;
 import org.jnetpcap.packet.JPacketHandler;  
@@ -172,6 +177,7 @@ public class PcapReader {
         checkpcap(pcapFile);
     }
     public static Pcap checkpcap(String pcapFile) {
+        HttpAnalyzer httpAnalyzer = JRegistry.getAnalyzer(HttpAnalyzer.class);
         found = false;
         Boolean state= false;
         StringBuilder errbuf = new StringBuilder(); 
@@ -187,8 +193,36 @@ public class PcapReader {
         JScanner.getThreadLocal().setFrameNumber(0); 
         if (state){
             superFlowMap = new JFlowMap();
-            pcap.loop(Pcap.LOOP_INFINITE, superFlowMap, null);
+            final Map<JFlowKey, JFlow> flows = new HashMap<JFlowKey, JFlow>();  
+            final PcapPacket packet = new PcapPacket(JMemory.POINTER);
+            for (int i = 0; i < 50; i++) {  
+                pcap.nextEx(packet);  
+                final JFlowKey key = packet.getState().getFlowKey();  
+                JFlow flow = flows.get(key);  
+                if (flow == null) {  
+                    flows.put(key, flow = new JFlow(key));  
+                }  
             }
+            for (JFlow flow : flows.values()) {  
+            if (flow.isReversable()) {  
+                List<JPacket> forward = flow.getForward();  
+                for (JPacket p : forward) {  
+                    System.out.printf("%d, ", p.getFrameNumber());  
+                }  
+                System.out.println();  
+  
+                List<JPacket> reverse = flow.getReverse();  
+                for (JPacket p : reverse) {  
+                    System.out.printf("%d, ", p.getFrameNumber());  
+                }  
+            } else {  
+                for (JPacket p : flow.getAll()) {  
+                    System.out.printf("%d, ", p.getFrameNumber());  
+                }  
+            }  
+            System.out.println();  
+        }  
+        }
         pcap.loop(-1, new JPacketHandler<StringBuilder>(){
             PcapPacket packet = new PcapPacket(JMemory.POINTER);  
             @Override
